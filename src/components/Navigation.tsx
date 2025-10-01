@@ -1,10 +1,12 @@
+// src/components/Navigation.tsx
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ThemeToggle";
-import { Calendar, Home, Settings, Menu, X } from "lucide-react";
+import { Calendar, Home, Menu, X } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext"; // Importa o hook de autenticação
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,30 +14,25 @@ export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Obtém o estado de autenticação e os dados do usuário
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isLoading } = useAuth();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Filtra os itens de navegação com base na role do usuário
   const navItems = [
     { href: "/", label: "Início", icon: Home, show: true },
     { href: "/agendamento", label: "Agendamento", icon: Calendar, show: true },
-    // Mostra o link de Admin apenas se o usuário for um admin
-    { href: "/admin", label: "Admin", icon: Settings, show: isAuthenticated && user?.role === 'admin' },
+    { href: "/admin", label: "Admin", icon: Home, show: isAuthenticated && user?.role === 'admin' },
   ].filter(item => item.show);
 
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = () => {
     logout();
-    navigate('/'); // Redireciona para a home após o logout
+    navigate('/');
   };
 
   return (
@@ -57,7 +54,7 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-12">
+          <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -77,22 +74,17 @@ export function Navigation() {
           <div className="flex items-center space-x-4">
             <ModeToggle />
             
-            {/* Lógica condicional para Login/Logout */}
             <div className="hidden md:flex items-center space-x-2">
-              {isAuthenticated ? (
+              {isAuthenticated && user ? (
                 <>
-                  <span className="text-sm text-muted-foreground">Olá, {user?.name.split(' ')[0]}</span>
+                  <span className="text-sm text-muted-foreground">Olá, {user.name.split(' ')[0]}</span>
                   <Button variant="ghost" size="sm" onClick={handleLogout}>Sair</Button>
                 </>
               ) : (
-                <>
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>Login</Button>
-                  <Button size="sm" onClick={() => navigate('/register')}>Registrar</Button>
-                </>
+                !isLoading && <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>Admin</Button>
               )}
             </div>
             
-            {/* Mobile Menu Button */}
             <Button
               variant="ghost"
               size="sm"
@@ -113,6 +105,7 @@ export function Navigation() {
                   key={item.href}
                   to={item.href}
                   onClick={() => setIsMenuOpen(false)}
+                  // CORREÇÃO: Placeholder removido e código correto inserido
                   className={cn(
                     "text-base font-medium transition-colors duration-200",
                     isActive(item.href)
@@ -123,15 +116,11 @@ export function Navigation() {
                   {item.label}
                 </Link>
               ))}
-              {/* Lógica condicional para Login/Logout no menu mobile */}
               <div className="pt-4 border-t border-border/20 flex flex-col space-y-2">
-                {isAuthenticated ? (
+                {isAuthenticated && user ? (
                    <Button variant="ghost" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>Sair</Button>
                 ) : (
-                  <>
-                    <Button variant="ghost" onClick={() => { navigate('/login'); setIsMenuOpen(false); }}>Login</Button>
-                    <Button onClick={() => { navigate('/register'); setIsMenuOpen(false); }}>Registrar</Button>
-                  </>
+                  !isLoading && <Button variant="ghost" onClick={() => { navigate('/login'); setIsMenuOpen(false); }}>Admin</Button>
                 )}
               </div>
             </div>

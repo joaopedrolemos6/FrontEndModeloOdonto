@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
+// src/pages-admin/Admin.tsx
+
+import { useEffect, useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Calendar,
@@ -18,9 +21,19 @@ import {
   Mail,
   Plus
 } from "lucide-react";
+import { api } from "@/services/api";
+import { UserPublic } from "@/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+// Tipagem para resposta paginada de usuários
+interface PaginatedUsersResponse {
+  success: boolean;
+  data: UserPublic[];
+  pagination: object;
+}
+
+// Tipagem de agendamentos (mock)
 interface Appointment {
   id: string;
   patient: string;
@@ -34,10 +47,40 @@ interface Appointment {
 }
 
 export default function Admin() {
+  // ==== USUÁRIOS ====
+  const [users, setUsers] = useState<UserPublic[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [errorUsers, setErrorUsers] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoadingUsers(true);
+        setErrorUsers(null);
+
+        const response = await api.get<PaginatedUsersResponse>('/users');
+        if (response.data && Array.isArray(response.data.data)) {
+          setUsers(response.data.data);
+        } else {
+          console.error("A API não retornou o formato esperado.");
+          setUsers([]);
+        }
+
+      } catch (err) {
+        console.error("Erro ao buscar usuários:", err);
+        setErrorUsers("Não foi possível carregar os usuários.");
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // ==== AGENDAMENTOS (mock) ====
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
-  // Mock data
   const [appointments] = useState<Appointment[]>([
     {
       id: "1",
@@ -125,113 +168,101 @@ export default function Admin() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bold mb-2">Painel Administrativo</h1>
-              <p className="text-muted-foreground">Gerencie agendamentos e monitore sua clínica</p>
+              <p className="text-muted-foreground">Gerencie usuários e agendamentos do sistema</p>
             </div>
-            <Button className="btn-hero">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Agendamento
-            </Button>
-          </div>
-
-          {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <Card className="card-premium text-center">
-              <div className="p-4">
-                <Calendar className="h-8 w-8 text-primary mx-auto mb-2" />
-                <div className="text-2xl font-bold">{stats.total}</div>
-                <div className="text-sm text-muted-foreground">Total</div>
-              </div>
-            </Card>
-            
-            <Card className="card-premium text-center">
-              <div className="p-4">
-                <Clock className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold">{stats.pending}</div>
-                <div className="text-sm text-muted-foreground">Pendente</div>
-              </div>
-            </Card>
-            
-            <Card className="card-premium text-center">
-              <div className="p-4">
-                <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold">{stats.confirmed}</div>
-                <div className="text-sm text-muted-foreground">Confirmado</div>
-              </div>
-            </Card>
-            
-            <Card className="card-premium text-center">
-              <div className="p-4">
-                <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold">{stats.completed}</div>
-                <div className="text-sm text-muted-foreground">Concluído</div>
-              </div>
-            </Card>
-            
-            <Card className="card-premium text-center">
-              <div className="p-4">
-                <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold">{stats.cancelled}</div>
-                <div className="text-sm text-muted-foreground">Cancelado</div>
-              </div>
-            </Card>
           </div>
         </div>
 
+        {/* Abas principais */}
         <Tabs defaultValue="appointments" className="space-y-6">
-          <TabsList className="grid w-full md:w-auto grid-cols-3">
+          <TabsList className="grid w-full md:w-auto grid-cols-4">
             <TabsTrigger value="appointments">Agendamentos</TabsTrigger>
+            <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="analytics">Relatórios</TabsTrigger>
             <TabsTrigger value="settings">Configurações</TabsTrigger>
           </TabsList>
 
+          {/* === ABA DE AGENDAMENTOS === */}
           <TabsContent value="appointments" className="space-y-6">
-            {/* Filters */}
-            <Card className="card-premium">
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="flex flex-col md:flex-row gap-4 flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por paciente ou serviço..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 w-full md:w-64"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value)}
-                      className="px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                    >
-                      <option value="all">Todos os status</option>
-                      <option value="pending">Pendente</option>
-                      <option value="confirmed">Confirmado</option>
-                      <option value="completed">Concluído</option>
-                      <option value="cancelled">Cancelado</option>
-                    </select>
-                  </div>
+            {/* Estatísticas */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+              <Card className="text-center p-4">
+                <Calendar className="h-8 w-8 text-primary mx-auto mb-2" />
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-sm text-muted-foreground">Total</div>
+              </Card>
+              <Card className="text-center p-4">
+                <Clock className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                <div className="text-2xl font-bold">{stats.pending}</div>
+                <div className="text-sm text-muted-foreground">Pendentes</div>
+              </Card>
+              <Card className="text-center p-4">
+                <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                <div className="text-2xl font-bold">{stats.confirmed}</div>
+                <div className="text-sm text-muted-foreground">Confirmados</div>
+              </Card>
+              <Card className="text-center p-4">
+                <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+                <div className="text-2xl font-bold">{stats.completed}</div>
+                <div className="text-sm text-muted-foreground">Concluídos</div>
+              </Card>
+              <Card className="text-center p-4">
+                <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                <div className="text-2xl font-bold">{stats.cancelled}</div>
+                <div className="text-sm text-muted-foreground">Cancelados</div>
+              </Card>
+            </div>
+
+            {/* Filtros */}
+            <Card className="p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="flex flex-col md:flex-row gap-4 flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por paciente ou serviço..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 w-full md:w-64"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                  >
+                    <option value="all">Todos</option>
+                    <option value="pending">Pendente</option>
+                    <option value="confirmed">Confirmado</option>
+                    <option value="completed">Concluído</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
                 </div>
               </div>
+
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Agendamento
+              </Button>
             </Card>
 
-            {/* Appointments List */}
+            {/* Lista de Agendamentos */}
             <div className="space-y-4">
               {filteredAppointments.length === 0 ? (
-                <Card className="card-premium text-center p-12">
+                <Card className="text-center p-12">
                   <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-xl font-semibold mb-2">Nenhum agendamento encontrado</h3>
                   <p className="text-muted-foreground">
-                    {searchTerm || selectedStatus !== "all" 
-                      ? "Tente ajustar os filtros de busca" 
+                    {searchTerm || selectedStatus !== "all"
+                      ? "Tente ajustar os filtros de busca"
                       : "Nenhum agendamento cadastrado ainda"}
                   </p>
                 </Card>
               ) : (
                 filteredAppointments.map((appointment) => (
-                  <Card key={appointment.id} className="card-premium hover:shadow-gold">
+                  <Card key={appointment.id} className="p-4 hover:shadow-md">
                     <div className="grid md:grid-cols-6 gap-4 items-center">
                       <div className="md:col-span-2">
                         <h3 className="font-semibold text-lg">{appointment.patient}</h3>
@@ -244,44 +275,34 @@ export default function Admin() {
                           {appointment.phone}
                         </div>
                       </div>
-                      
+
                       <div>
                         <p className="font-medium">{appointment.service}</p>
                         {appointment.notes && (
                           <p className="text-sm text-muted-foreground">{appointment.notes}</p>
                         )}
                       </div>
-                      
+
                       <div>
                         <p className="font-medium">
                           {format(appointment.date, "dd/MM/yyyy", { locale: ptBR })}
                         </p>
                         <p className="text-sm text-muted-foreground">{appointment.time}</p>
                       </div>
-                      
-                      <div>
-                        {getStatusBadge(appointment.status)}
-                      </div>
-                      
+
+                      <div>{getStatusBadge(appointment.status)}</div>
+
                       <div className="flex gap-2">
                         {appointment.status === "pending" && (
                           <>
-                            <Button size="sm" variant="default">
-                              Confirmar
-                            </Button>
-                            <Button size="sm" variant="destructive">
-                              Cancelar
-                            </Button>
+                            <Button size="sm" variant="default">Confirmar</Button>
+                            <Button size="sm" variant="destructive">Cancelar</Button>
                           </>
                         )}
                         {appointment.status === "confirmed" && (
-                          <Button size="sm" variant="outline">
-                            Concluir
-                          </Button>
+                          <Button size="sm" variant="outline">Concluir</Button>
                         )}
-                        <Button size="sm" variant="ghost">
-                          Editar
-                        </Button>
+                        <Button size="sm" variant="ghost">Editar</Button>
                       </div>
                     </div>
                   </Card>
@@ -290,23 +311,80 @@ export default function Admin() {
             </div>
           </TabsContent>
 
+          {/* === ABA DE USUÁRIOS === */}
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gerenciamento de Usuários</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingUsers ? (
+                  <div>Carregando usuários...</div>
+                ) : errorUsers ? (
+                  <div className="text-red-500">{errorUsers}</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Função</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.length > 0 ? (
+                        users.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell>{user.name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                                {user.role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={user.is_active ? 'default' : 'destructive'}
+                                className={user.is_active ? 'bg-green-500' : ''}
+                              >
+                                {user.is_active ? 'Ativo' : 'Inativo'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center">
+                            Nenhum usuário encontrado.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* === ABA RELATÓRIOS === */}
           <TabsContent value="analytics">
-            <Card className="card-premium text-center p-12">
+            <Card className="text-center p-12">
               <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Relatórios e Analytics</h3>
               <p className="text-muted-foreground">
-                Funcionalidade em desenvolvimento. Em breve você terá acesso a relatórios detalhados.
+                Em breve você poderá visualizar estatísticas detalhadas de agendamentos e usuários.
               </p>
             </Card>
           </TabsContent>
 
+          {/* === ABA CONFIGURAÇÕES === */}
           <TabsContent value="settings">
-            <Card className="card-premium text-center p-12">
+            <Card className="text-center p-12">
               <Settings className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Configurações</h3>
               <p className="text-muted-foreground">
-                Configurações do sistema em desenvolvimento. Em breve você poderá personalizar horários, 
-                serviços e notificações.
+                Personalize horários, serviços e preferências do sistema.
               </p>
             </Card>
           </TabsContent>
