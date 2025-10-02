@@ -1,101 +1,47 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-interface PersonalInfoSectionProps {
+interface Props {
+  onBack: () => void;
+  onSubmit: () => void;
+  updateFormData: (data: { name: string, email: string, phone: string }) => void;
   formData: {
     name: string;
     email: string;
     phone: string;
-  };
-  errors: Partial<{
-    name: string;
-    email: string;
-    phone: string;
-  }>;
-  onInputChange: (field: string, value: string) => void;
+  }
 }
 
-export function PersonalInfoSection({ formData, errors, onInputChange }: PersonalInfoSectionProps) {
+export function PersonalInfoSection({ onBack, onSubmit, updateFormData, formData }: Props) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-          <span className="text-primary text-sm font-semibold">1</span>
+    <Card>
+      <CardHeader>
+        <CardTitle>3. Suas Informações</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="name">Nome Completo</Label>
+          <Input id="name" name="name" value={formData.name} onChange={handleInputChange} />
         </div>
-        <h2 className="text-lg font-medium text-foreground">Dados Pessoais</h2>
-        <p className="text-sm text-muted-foreground font-light">Para entrarmos em contato</p>
-      </div>
-      
-      <div className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="name" className="text-sm font-medium text-foreground">
-            Nome completo
-          </Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => onInputChange("name", e.target.value)}
-            placeholder="Digite seu nome completo"
-            className={cn(
-              "border-0 bg-secondary/30 focus:bg-secondary/50 transition-colors h-12",
-              errors.name && "border border-destructive"
-            )}
-          />
-          {errors.name && (
-            <p className="text-xs text-destructive flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              {errors.name}
-            </p>
-          )}
+        <div>
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} />
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium text-foreground">
-            Email
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => onInputChange("email", e.target.value)}
-            placeholder="seu@email.com"
-            className={cn(
-              "border-0 bg-secondary/30 focus:bg-secondary/50 transition-colors h-12",
-              errors.email && "border border-destructive"
-            )}
-          />
-          {errors.email && (
-            <p className="text-xs text-destructive flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              {errors.email}
-            </p>
-          )}
+        <div>
+          <Label htmlFor="phone">Telefone</Label>
+          <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} />
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone" className="text-sm font-medium text-foreground">
-            Telefone
-          </Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => onInputChange("phone", e.target.value)}
-            placeholder="(11) 99999-9999"
-            className={cn(
-              "border-0 bg-secondary/30 focus:bg-secondary/50 transition-colors h-12",
-              errors.phone && "border border-destructive"
-            )}
-          />
-          {errors.phone && (
-            <p className="text-xs text-destructive flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              {errors.phone}
-            </p>
-          )}
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={onBack}>Voltar</Button>
+          <Button onClick={onSubmit}>Finalizar Agendamento</Button>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

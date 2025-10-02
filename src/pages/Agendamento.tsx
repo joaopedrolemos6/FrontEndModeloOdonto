@@ -55,11 +55,13 @@ export default function Agendamento() {
       case 1:
         return <ServiceSelectionSection onNext={nextStep} updateFormData={updateFormData} />;
       case 2:
-        return <DateTimeSection onNext={nextStep} onBack={prevStep} updateFormData={updateFormData} />;
+        // CORREÇÃO APLICADA AQUI
+        return <DateTimeSection onNext={nextStep} onBack={prevStep} updateFormData={updateFormData} formData={formData} />;
       case 3:
-        return <PersonalInfoSection onBack={prevStep} onSubmit={handleSubmit} updateFormData={updateFormData} />;
+        // CORREÇÃO PROATIVA APLICADA AQUI
+        return <PersonalInfoSection onBack={prevStep} onSubmit={handleSubmit} updateFormData={updateFormData} formData={formData} />;
       case 4:
-        return <SuccessPage />;
+        return <SuccessPage formData={formData} />; // Também passei os dados para a página de sucesso
       default:
         return <div>Etapa desconhecida</div>;
     }
