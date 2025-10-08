@@ -1,14 +1,12 @@
-// src/components/admin/AppointmentCalendar.tsx
-
 import { useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
-import { EventInput, EventClickArg } from '@fullcalendar/core';
+import { EventClickArg } from '@fullcalendar/core';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
-import { api } from '@/services/api';
+import { api, ApiResponse } from '@/services/api';
 import {
   Dialog,
   DialogContent,
@@ -19,37 +17,59 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { User, Stethoscope, Clock, StickyNote } from 'lucide-react';
 
-// Componente de Calendário de Agendamentos
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end?: string;
+  extendedProps: {
+    patient_name: string;
+    service_name: string;
+    status: string;
+    notes?: string;
+  };
+}
+
 export function AppointmentCalendar() {
   const [selectedEvent, setSelectedEvent] = useState<EventClickArg | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Busca os eventos da API
-  const fetchEvents = (fetchInfo: any, successCallback: any, failureCallback: any) => {
-    api.get('/admin/calendar', {
+  const fetchEvents = (fetchInfo: any, successCallback: (events: CalendarEvent[]) => void, failureCallback: (error: any) => void) => {
+    api.get<ApiResponse<CalendarEvent[]>>('/admin/calendar', {
       params: {
         start: fetchInfo.startStr,
         end: fetchInfo.endStr,
       },
     })
-    .then(response => successCallback(response.data))
-    .catch(error => failureCallback(error));
+    .then(response => {
+      // ALTERAÇÃO ASSERTIVA:
+      // Agora, o código espera `response.data.data` e verifica se existe
+      // para evitar erros e quebrar la interface.
+      if (response.data && Array.isArray(response.data.data)) {
+        successCallback(response.data.data);
+      } else {
+        console.warn('Resposta da API do calendário não tem o formato esperado:', response.data);
+        successCallback([]); // Envia array vazio se o formato estiver errado
+      }
+    })
+    .catch(error => {
+      console.error("Erro ao buscar eventos do calendário:", error);
+      failureCallback(error);
+    });
   };
 
-  // Lida com o clique em um evento
   const handleEventClick = (clickInfo: EventClickArg) => {
     setSelectedEvent(clickInfo);
     setIsModalOpen(true);
   };
 
-  // Retorna a variante do badge com base no status
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'confirmed': return 'default';
       case 'completed': return 'outline';
       case 'cancelled': return 'destructive';
       case 'pending': return 'secondary';
-      default: return 'secondary';
+      default: 'secondary';
     }
   };
 
@@ -66,11 +86,10 @@ export function AppointmentCalendar() {
         events={fetchEvents}
         locale={ptBrLocale}
         eventClick={handleEventClick}
-        height="auto" // Ajusta a altura ao contêiner
+        height="auto"
         contentHeight="auto"
       />
 
-      {/* Modal para exibir detalhes do agendamento */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -83,15 +102,18 @@ export function AppointmentCalendar() {
             <div className="space-y-4 mt-4">
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{selectedEvent.event.extendedProps.patientName}</span>
+                <span className="font-medium">{selectedEvent.event.extendedProps.patient_name}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                <span>{selectedEvent.event.extendedProps.serviceName}</span>
+                <span>{selectedEvent.event.extendedProps.service_name}</span>
               </div>
                <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>{selectedEvent.event.start?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {selectedEvent.event.end?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span>
+                  {selectedEvent.event.start?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {selectedEvent.event.end && ` - ${selectedEvent.event.end?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                </span>
               </div>
               <div className="flex items-center gap-3">
                  <Badge variant={getStatusBadgeVariant(selectedEvent.event.extendedProps.status)}>
